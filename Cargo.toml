@@ -1,0 +1,7 @@
+[package]
+name = "dyn-histogram"
+version = "0.1.0"
+authors = ["Stefan Kaufhold <cere@fastmail.fm>"]
+
+[dependencies]
+binary-heap-plus = "0.1.4"
