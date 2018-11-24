@@ -5,3 +5,5 @@ authors = ["Stefan Kaufhold <cere@fastmail.fm>"]
 
 [dependencies]
 binary-heap-plus = "0.1.4"
+num = "0.2.0"
+ord_subset = "3"

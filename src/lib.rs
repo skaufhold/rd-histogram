@@ -1,12 +1,6 @@
 extern crate binary_heap_plus;
+extern crate num;
+extern crate ord_subset;
 
+mod simple_vec_histogram;
 mod traits;
-mod d2tree_v2;
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
-    }
-}
