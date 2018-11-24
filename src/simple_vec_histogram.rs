@@ -1,7 +1,7 @@
-use super::traits::DynamicHistogram;
 use num::traits::NumAssign;
-use ord_subset::{OrdSubset, OrdSubsetIterExt};
+use ord_subset::{OrdSubset, OrdSubsetIterExt, OrdSubsetSliceExt};
 use std::cmp::Ordering;
+use traits::{DynamicHistogram, EmptyClone, Merge, MergeRef};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct SimpleVecHistogram<V, C> {
@@ -33,7 +33,7 @@ impl<V: PartialOrd + OrdSubset + NumAssign + Copy, C: Clone + NumAssign + Copy>
     }
 
     fn shrink_to_fit(&mut self) {
-        if self.bins.len() > self.bins_cap {
+        while self.bins.len() > self.bins_cap {
             let merge_result = self
                 .bins
                 .iter()
@@ -109,6 +109,34 @@ impl<V: PartialOrd + OrdSubset + Copy + NumAssign, C: Copy + NumAssign + Into<V>
     }
 }
 
+impl<V: PartialOrd + OrdSubset + Copy + NumAssign, C: Copy + NumAssign + Into<V>> EmptyClone
+    for SimpleVecHistogram<V, C>
+{
+    fn empty_clone(&self) -> Self {
+        SimpleVecHistogram::new(self.bins_cap)
+    }
+}
+
+impl<V: PartialOrd + OrdSubset + Copy + NumAssign, C: Copy + NumAssign + Into<V>> MergeRef
+    for SimpleVecHistogram<V, C>
+{
+    fn merge_ref(&mut self, other: &Self) {
+        self.bins.extend_from_slice(other.bins());
+        self.bins.ord_subset_sort_by_key(|b| b.left);
+        self.shrink_to_fit();
+    }
+}
+
+impl<V: PartialOrd + OrdSubset + Copy + NumAssign, C: Copy + NumAssign + Into<V>> Merge
+    for SimpleVecHistogram<V, C>
+{
+    fn merge(&mut self, other: Self) {
+        self.bins.extend(other.bins.into_iter());
+        self.bins.ord_subset_sort_by_key(|b| b.left);
+        self.shrink_to_fit();
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -116,13 +144,12 @@ mod tests {
     fn insert() {
         // fill with the maximum bin number
         let mut h = SimpleVecHistogram::new(5);
-        let samples: &[f64] = &[1., 2., 3., 4., 5.];
-        for i in samples {
-            h.insert(*i, 1_u32);
-        }
+        let samples: &[(f64, u32)] = &[(1., 1), (2., 1), (3., 1), (4., 1), (5., 1)];
+        h.insert_iter(samples);
+
         for (bin, s) in h.bins().iter().zip(samples.iter()) {
-            assert_eq!(*s, bin.left);
-            assert_eq!(*s, bin.right);
+            assert_eq!(s.0, bin.left);
+            assert_eq!(s.0, bin.right);
         }
         // checks merging the closest two bins
         h.insert(5.5, 2);
@@ -144,6 +171,43 @@ mod tests {
                 right: 5.5,
                 count: 4,
                 sum: 21.2
+            }
+        );
+    }
+
+    #[test]
+    fn merge() {
+        // fill with the maximum bin number
+        let samples1: &[(f64, u32)] = &[(1., 1), (2., 1), (3., 1), (4., 1), (5., 1)];
+        let samples2: &[(f64, u32)] = &[(1.1, 1), (2.1, 1), (3.1, 1), (4.1, 1), (5.1, 1)];
+
+        let mut h = SimpleVecHistogram::new(5);
+        h.insert_iter(samples1);
+        println!("{:?}", h);
+
+        let mut h2 = SimpleVecHistogram::new(5);
+        h2.insert_iter(samples2);
+        println!("{:?}", h2);
+
+        h.merge(h2);
+        println!("{:?}", h);
+        assert_eq!(h.bins().len(), 5);
+        assert_eq!(
+            h.bins()[2],
+            Bin {
+                left: 3.,
+                right: 3.1,
+                count: 2,
+                sum: 6.1
+            }
+        );
+        assert_eq!(
+            h.bins()[4],
+            Bin {
+                left: 5.,
+                right: 5.1,
+                count: 2,
+                sum: 10.1
             }
         );
     }

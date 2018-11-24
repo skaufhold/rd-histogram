@@ -10,6 +10,16 @@ pub trait DynamicHistogram<T, C> {
     /// Insert a new data point into this histogram
     fn insert(&mut self, value: T, count: C);
 
+    fn insert_iter<'a>(&mut self, values: impl IntoIterator<Item = &'a (T, C)>)
+    where
+        T: 'a + Copy,
+        C: 'a + Copy,
+    {
+        for (val, count) in values {
+            self.insert(*val, *count);
+        }
+    }
+
     /// Count the total number of data points in this histogram (over all bins)
     fn count(&self) -> C;
 }
