@@ -2,7 +2,8 @@
 /// implementation details
 pub trait DynamicHistogram<T, C> {
     /// Type of a bin in this histogram
-    type Bin;
+    type Bin;//: HistogramBin;
+    //type BinIter: Iterator<Item=Self::Bin>;
 
     /// Instantiate a histogram with the given number of maximum bins
     fn new(n_bins: usize) -> Self;
@@ -22,4 +23,6 @@ pub trait DynamicHistogram<T, C> {
 
     /// Count the total number of data points in this histogram (over all bins)
     fn count(&self) -> C;
+
+    //fn iter_bins() -> Self::BinIter;
 }

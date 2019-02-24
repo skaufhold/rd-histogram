@@ -1,7 +1,7 @@
 use num::traits::NumAssign;
 use ord_subset::{OrdSubset, OrdSubsetIterExt, OrdSubsetSliceExt};
 use std::cmp::Ordering;
-use traits::{DynamicHistogram, EmptyClone, Merge, MergeRef};
+use crate::traits::{DynamicHistogram, EmptyClone, Merge, MergeRef};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct SimpleVecHistogram<V, C> {
@@ -18,7 +18,7 @@ pub struct Bin<V, C> {
 }
 
 impl<V: PartialOrd + OrdSubset + NumAssign + Copy, C: Clone + NumAssign + Copy>
-    SimpleVecHistogram<V, C>
+SimpleVecHistogram<V, C>
 {
     fn search_bins(&self, value: V) -> Result<usize, usize> {
         self.bins.binary_search_by(|probe| {
@@ -66,9 +66,8 @@ impl<V: PartialOrd + OrdSubset + NumAssign + Copy, C: Clone + NumAssign + Copy>
     }
 }
 
-impl<V: PartialOrd + OrdSubset + Copy + NumAssign, C: Copy + NumAssign + Into<V>>
-    DynamicHistogram<V, C> for SimpleVecHistogram<V, C>
-{
+impl<V, C> DynamicHistogram<V, C> for SimpleVecHistogram<V, C>
+    where V: PartialOrd + OrdSubset + Copy + NumAssign, C: Copy + NumAssign + Into<V> {
     /// Type of a bin in this histogram
     type Bin = Bin<V, C>;
 
@@ -109,17 +108,15 @@ impl<V: PartialOrd + OrdSubset + Copy + NumAssign, C: Copy + NumAssign + Into<V>
     }
 }
 
-impl<V: PartialOrd + OrdSubset + Copy + NumAssign, C: Copy + NumAssign + Into<V>> EmptyClone
-    for SimpleVecHistogram<V, C>
-{
+impl<V, C> EmptyClone for SimpleVecHistogram<V, C>
+    where V: PartialOrd + OrdSubset + Copy + NumAssign, C: Copy + NumAssign + Into<V> {
     fn empty_clone(&self) -> Self {
         SimpleVecHistogram::new(self.bins_cap)
     }
 }
 
-impl<V: PartialOrd + OrdSubset + Copy + NumAssign, C: Copy + NumAssign + Into<V>> MergeRef
-    for SimpleVecHistogram<V, C>
-{
+impl<V, C> MergeRef for SimpleVecHistogram<V, C>
+    where V: PartialOrd + OrdSubset + Copy + NumAssign, C: Copy + NumAssign + Into<V> {
     fn merge_ref(&mut self, other: &Self) {
         self.bins.extend_from_slice(other.bins());
         self.bins.ord_subset_sort_by_key(|b| b.left);
@@ -127,9 +124,8 @@ impl<V: PartialOrd + OrdSubset + Copy + NumAssign, C: Copy + NumAssign + Into<V>
     }
 }
 
-impl<V: PartialOrd + OrdSubset + Copy + NumAssign, C: Copy + NumAssign + Into<V>> Merge
-    for SimpleVecHistogram<V, C>
-{
+impl<V, C> Merge for SimpleVecHistogram<V, C>
+    where V: PartialOrd + OrdSubset + Copy + NumAssign, C: Copy + NumAssign + Into<V> {
     fn merge(&mut self, other: Self) {
         self.bins.extend(other.bins.into_iter());
         self.bins.ord_subset_sort_by_key(|b| b.left);
@@ -140,11 +136,12 @@ impl<V: PartialOrd + OrdSubset + Copy + NumAssign, C: Copy + NumAssign + Into<V>
 #[cfg(test)]
 mod tests {
     use super::*;
+
     #[test]
     fn insert() {
         // fill with the maximum bin number
         let mut h = SimpleVecHistogram::new(5);
-        let samples: &[(f64, u32)] = &[(1., 1), (2., 1), (3., 1), (4., 1), (5., 1)];
+        let samples = &[(1_f64, 1_u32), (2., 1), (3., 1), (4., 1), (5., 1)];
         h.insert_iter(samples);
 
         for (bin, s) in h.bins().iter().zip(samples.iter()) {
@@ -159,7 +156,7 @@ mod tests {
                 left: 5.,
                 right: 5.5,
                 count: 3,
-                sum: 16.
+                sum: 16.,
             }
         );
         // checks inserting into an existing bin
@@ -170,7 +167,7 @@ mod tests {
                 left: 5.,
                 right: 5.5,
                 count: 4,
-                sum: 21.2
+                sum: 21.2,
             }
         );
     }
@@ -178,8 +175,8 @@ mod tests {
     #[test]
     fn merge() {
         // fill with the maximum bin number
-        let samples1: &[(f64, u32)] = &[(1., 1), (2., 1), (3., 1), (4., 1), (5., 1)];
-        let samples2: &[(f64, u32)] = &[(1.1, 1), (2.1, 1), (3.1, 1), (4.1, 1), (5.1, 1)];
+        let samples1 = &[(1., 1), (2., 1), (3., 1), (4., 1), (5., 1)];
+        let samples2 = &[(1.1, 1), (2.1, 1), (3.1, 1), (4.1, 1), (5.1, 1)];
 
         let mut h = SimpleVecHistogram::new(5);
         h.insert_iter(samples1);
@@ -198,7 +195,7 @@ mod tests {
                 left: 3.,
                 right: 3.1,
                 count: 2,
-                sum: 6.1
+                sum: 6.1,
             }
         );
         assert_eq!(
@@ -207,7 +204,7 @@ mod tests {
                 left: 5.,
                 right: 5.1,
                 count: 2,
-                sum: 10.1
+                sum: 10.1,
             }
         );
     }
